@@ -1,8 +1,20 @@
-google-generativeai==0.8.5
-google-ai-generativelanguage==0.6.15
-langchain-google-genai==0.1.8
-streamlit==1.29.0
-pypdf==3.17.1
-faiss-cpu==1.7.4
-python-dotenv==1.0.0
-numpy==1.26.4
+# Core Requirements
+streamlit>=1.35.0
+python-dotenv>=1.0.0
+
+# LangChain Ecosystem
+langchain>=0.1.14
+langchain-community>=0.0.20
+langchain-core>=0.1.33
+langchain-text-splitters>=0.0.1
+langchain-google-genai>=0.1.0
+
+# Google AI & Vector Store
+google-generativeai>=0.3.2
+faiss-cpu>=1.7.4
+
+# PDF Processing
+pypdf>=3.17.1
+
+# Async Support
+nest-asyncio>=1.5.8
