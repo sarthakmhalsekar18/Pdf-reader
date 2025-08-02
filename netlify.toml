@@ -1,6 +1,3 @@
 [build]
-  command = "pip install -r Requirements.txt && streamlit run app.py"
+  command = "python -m pip install -r Requirements.txt && python -m streamlit run app.py"
   publish = "."
-
-[build.environment]
-  PYTHON_VERSION = "3.9"
