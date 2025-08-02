@@ -2,11 +2,11 @@ import os
 import tempfile
 import streamlit as st
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter  # Updated import
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
+from langchain_core.prompts import PromptTemplate  # Updated import
 from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
 
 # Configure page
 st.set_page_config(
@@ -41,7 +41,7 @@ def process_pdf(uploaded_file):
             tmp_file_path = tmp_file.name
         
         loader = PyPDFLoader(tmp_file_path)
-        pages = loader.load_and_split()
+        pages = loader.load()
         
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=2000,
@@ -107,10 +107,7 @@ def initialize_qa(vector_store):
     Answer:
     """
     
-    PROMPT = PromptTemplate(
-        template=prompt_template,
-        input_variables=["context", "question"]
-    )
+    PROMPT = PromptTemplate.from_template(prompt_template)  # Updated method
     
     return RetrievalQA.from_chain_type(
         llm=llm,
@@ -166,7 +163,7 @@ if st.session_state.qa_chain:
         with st.chat_message("assistant"):
             with st.spinner("Analyzing document..."):
                 try:
-                    response = st.session_state.qa_chain({"query": prompt})
+                    response = st.session_state.qa_chain.invoke({"query": prompt})  # Updated method
                     answer = response["result"]
                     
                     # Format sources
