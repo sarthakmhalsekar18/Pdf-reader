@@ -1,3 +1,6 @@
 [build]
-  command = "python -m pip install -r Requirements.txt && python -m streamlit run app.py"
+  command = "python -m pip install -r Requirements.txt && python -m streamlit run app.py --browser.gatherUsageStats false"
   publish = "."
+
+
+  streamlit run app.py --browser.gatherUsageStats false
