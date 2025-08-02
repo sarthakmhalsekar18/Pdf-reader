@@ -9,25 +9,37 @@ from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 
 # Configure page
-st.set_page_config(page_title="Gemini 1.5 Flash Q&A", layout="wide")
+st.set_page_config(
+    page_title="Gemini PDF Q&A Assistant",
+    layout="wide",
+    page_icon="📄",
+    initial_sidebar_state="expanded"
+)
 
 # Initialize session state
 if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "pdf_processed" not in st.session_state:
+    st.session_state.pdf_processed = False
 
-# Load environment variables (for local testing)
+# Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-# PDF Processing Function
+# Check for API key
+if not os.getenv("GOOGLE_API_KEY"):
+    st.error("❌ Google API key not found. Please add it to your environment variables.")
+    st.stop()
+
+# PDF Processing Function with error handling
 def process_pdf(uploaded_file):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-        tmp_file.write(uploaded_file.getvalue())
-        tmp_file_path = tmp_file.name
-    
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            tmp_file_path = tmp_file.name
+        
         loader = PyPDFLoader(tmp_file_path)
         pages = loader.load_and_split()
         
@@ -52,10 +64,14 @@ def process_pdf(uploaded_file):
         
         return vector_store
     
+    except Exception as e:
+        st.error(f"Error processing PDF: {str(e)}")
+        return None
     finally:
-        os.unlink(tmp_file_path)
+        if 'tmp_file_path' in locals():
+            os.unlink(tmp_file_path)
 
-# Initialize QA System
+# Initialize QA System with enhanced prompt
 def initialize_qa(vector_store):
     retriever = vector_store.as_retriever(
         search_type="mmr",
@@ -65,22 +81,28 @@ def initialize_qa(vector_store):
     llm = ChatGoogleGenerativeAI(
         model="gemini-1.5-flash",
         temperature=0.2,
-        max_output_tokens=2000
+        max_output_tokens=2000,
+        safety_settings={
+            'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
+            'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
+            'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE',
+            'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
+        }
     )
     
     prompt_template = """
-    You are an expert at answering questions based on provided documents.
-    Use this context to provide a detailed, accurate response:
+    You are an expert AI assistant analyzing PDF documents. Follow these guidelines:
     
     Context: {context}
     
     Question: {question}
     
-    Guidelines:
-    1. Be precise and factual
-    2. Include relevant details
-    3. Structure your answer clearly
-    4. Mention page numbers if applicable
+    Response Requirements:
+    1. Answer strictly based on the provided context
+    2. Be concise yet comprehensive
+    3. Format with bullet points when listing items
+    4. Always cite page numbers like [Page X]
+    5. If unsure, say "The document doesn't specify"
     
     Answer:
     """
@@ -99,40 +121,80 @@ def initialize_qa(vector_store):
     )
 
 # UI Components
-st.title("📄 Gemini 1.5 Flash PDF Q&A")
-st.caption("Upload a PDF and ask questions about its content")
+st.title("📄 Gemini-Powered PDF Analyzer")
+st.markdown("""
+    <style>
+    .stChatInput {position: fixed; bottom: 2rem;}
+    .stChatMessage {padding: 1rem;}
+    </style>
+""", unsafe_allow_html=True)
 
-# File Uploader
-uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
-
-if uploaded_file and not st.session_state.qa_chain:
-    with st.spinner("Processing PDF with Gemini 1.5 Flash..."):
-        vector_store = process_pdf(uploaded_file)
-        st.session_state.qa_chain = initialize_qa(vector_store)
-    st.success("PDF processed successfully!")
+# Sidebar for additional controls
+with st.sidebar:
+    st.header("Settings")
+    uploaded_file = st.file_uploader(
+        "Upload PDF", 
+        type="pdf",
+        accept_multiple_files=False,
+        key="pdf_uploader"
+    )
+    
+    if uploaded_file and not st.session_state.pdf_processed:
+        with st.spinner("Processing PDF..."):
+            vector_store = process_pdf(uploaded_file)
+            if vector_store:
+                st.session_state.qa_chain = initialize_qa(vector_store)
+                st.session_state.pdf_processed = True
+                st.success("PDF processed successfully!")
+            else:
+                st.error("Failed to process PDF")
 
 # Chat Interface
 if st.session_state.qa_chain:
+    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    if prompt := st.chat_input("Ask about the PDF"):
+    # Chat input
+    if prompt := st.chat_input("Ask about the PDF..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
+        
         with st.chat_message("user"):
             st.markdown(prompt)
         
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = st.session_state.qa_chain({"query": prompt})
-                st.markdown(response["result"])
-                
-                with st.expander("View sources"):
+            with st.spinner("Analyzing document..."):
+                try:
+                    response = st.session_state.qa_chain({"query": prompt})
+                    answer = response["result"]
+                    
+                    # Format sources
+                    sources = []
                     for doc in response["source_documents"]:
-                        st.caption(f"Page {doc.metadata.get('page', 0)+1}")
-                        st.text(doc.page_content[:300] + "...")
-            
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": response["result"]
-            })
+                        page_num = doc.metadata.get('page', 0) + 1
+                        sources.append(f"📄 Page {page_num}: {doc.page_content[:200]}...")
+                    
+                    st.markdown(answer)
+                    
+                    if sources:
+                        with st.expander("🔍 Source References"):
+                            for source in sources:
+                                st.markdown(f"- {source}")
+                    
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": answer
+                    })
+                
+                except Exception as e:
+                    st.error(f"Error generating response: {str(e)}")
+
+else:
+    st.info("👈 Please upload a PDF file to begin")
+    st.markdown("""
+    ### How to use:
+    1. Upload a PDF document
+    2. Ask questions about its content
+    3. Get accurate answers with source references
+    """)
