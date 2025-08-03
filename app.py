@@ -31,7 +31,7 @@ try:
     from langchain_community.vectorstores import FAISS
     from langchain_core.prompts import PromptTemplate
     from langchain.chains import RetrievalQA
-    st.write("✅ All required packages imported successfully")
+    # st.write("✅ All required packages imported successfully")
 except ImportError as e:
     st.error(f"❌ Missing required packages: {str(e)}")
     st.info("Please install requirements: pip install langchain-google-genai langchain-community faiss-cpu pypdf python-dotenv")
@@ -47,8 +47,8 @@ if not GOOGLE_API_KEY:
     3. Restart the application
     """)
     st.stop()
-else:
-    st.write("✅ Google API key loaded from environment variables")
+# else:
+#     st.write("✅ Google API key loaded from environment variables")
 
 # Initialize session state
 if "qa_chain" not in st.session_state:
