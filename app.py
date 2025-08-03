@@ -4,6 +4,8 @@ import asyncio
 import streamlit as st
 # try:
 from dotenv import load_dotenv
+load_dotenv()
+# st.write("🔑 DEBUG: Loaded API key =", os.getenv("GOOGLE_API_KEY"))
 # except ImportError:
 #     subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv==1.0.0"])
 #     from dotenv import load_dotenv
