@@ -2,11 +2,11 @@ import os
 import tempfile
 import asyncio
 import streamlit as st
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv==1.0.0"])
-    from dotenv import load_dotenv
+# try:
+from dotenv import load_dotenv
+# except ImportError:
+#     subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv==1.0.0"])
+#     from dotenv import load_dotenv
 
 # Configure page before other imports
 st.set_page_config(
