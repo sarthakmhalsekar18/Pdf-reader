@@ -93,8 +93,8 @@ async def process_pdf_async(uploaded_file):
         # Split text
         st.write("✂️ Splitting text into chunks...")
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=2000,
-            chunk_overlap=300,
+            chunk_size=800,
+            chunk_overlap=150,
             separators=["\n\n", "\n", ". ", " ", ""]
         )
         chunks = text_splitter.split_documents(pages)
@@ -137,7 +137,7 @@ def initialize_qa(vector_store):
         
         st.write("🔍 Creating retriever...")
         retriever = vector_store.as_retriever(
-            search_type="mmr",
+            search_type="similarity",
             search_kwargs={"k": 5, "fetch_k": 20, "lambda_mult": 0.5}
         )
         st.write("✅ Retriever created")
@@ -158,7 +158,8 @@ def initialize_qa(vector_store):
         st.write("✅ Gemini model configured")
 
         st.write("📝 Setting up prompt template...")
-        prompt_template = """Answer based on this context:
+        prompt_template = """You are an expert assistant. Use ONLY the context below to answer the question. 
+If the answer is not found in the context, reply: "Not in document.
         
         {context}
         
@@ -177,7 +178,7 @@ def initialize_qa(vector_store):
         st.write("⛓️ Creating QA chain...")
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
-            chain_type="stuff",
+            chain_type="refine",
             retriever=retriever,
             chain_type_kwargs={"prompt": PROMPT},
             return_source_documents=True
