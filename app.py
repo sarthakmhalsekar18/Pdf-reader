@@ -171,6 +171,19 @@ If the answer is not found in the context, reply: "Not in document.
         - Use bullet points when helpful
         
         Answer:"""
+
+        refine_prompt = PromptTemplate.from_template("""You are a helpful assistant. 
+We have an existing answer and more context to refine it. 
+Improve the answer if needed using the context below. 
+If the context isn't helpful, return the original answer.
+
+Existing answer:
+{existing_answer}
+
+New context:
+{context}
+
+Refined answer:""")
         
         PROMPT = PromptTemplate.from_template(prompt_template)
         st.write("✅ Prompt template ready")
